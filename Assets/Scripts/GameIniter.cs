@@ -198,21 +198,15 @@ public class GameIniter : MonoBehaviour
         float current_time = Time.time;
         if (Time.time >= this.timeToUpdate)
         {
-            this.timeToUpdate = current_time + 1f / this.refreshRate;
+            timeToUpdate = current_time + 1f / refreshRate;
             simulator.simulation_step();
             for (int pos_y = 0; pos_y < simulator.world.height; pos_y++)
             {
                 for (int pos_x = 0; pos_x < simulator.world.width; pos_x++)
                 {
-                    Cell this_cell = simulator.world.cells[pos_y][pos_x];
-                    if (!this_cell.isAlive)
-                    {
-                        this_cell.repr.GetComponent<SpriteRenderer>().enabled = false;
-                    }
-                    else
-                    {
-                        this_cell.repr.GetComponent<SpriteRenderer>().enabled = true;
-                    }
+                    var this_cell = simulator.world.cells[pos_y][pos_x];
+                    var renderer = this_cell.repr.GetComponent<SpriteRenderer>();
+                    renderer.enabled = this_cell.isAlive;
                 }
             }
         };
