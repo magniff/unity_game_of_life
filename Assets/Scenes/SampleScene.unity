@@ -165,9 +165,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc11285b941cc71499bf5f9f4cf27ebe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  refreshRate: 80
+  refreshRate: 40
   cell_repr_template: {fileID: 0}
-  howManyPreinit: 1000
+  howManyPreinit: 2000
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0

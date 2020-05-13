@@ -1,6 +1,12 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Binders;
+
+
+namespace Binders {
+    public delegate T ReprConstructor<T>(Cell cell);
+}
 
 
 public struct Cell
@@ -26,14 +32,13 @@ public struct Cell
 }
 
 
-public struct World
+public class World
 {
     public readonly int width;
     public readonly int height;
     public Cell[][] cells;
-    public delegate GameObject ReprConstructor(Cell cell);
 
-    public World(int width, int height, ReprConstructor repr_constructor)
+    public World(int width, int height, ReprConstructor<GameObject> repr_constructor)
     {
         this.width = width;
         this.height = height;
@@ -55,7 +60,7 @@ public struct World
 class GOLRunner
 {
     public World world;
-    public GOLRunner(int width, int height, World.ReprConstructor repr_constructor)
+    public GOLRunner(int width, int height, ReprConstructor<GameObject> repr_constructor)
     {
         this.world = new World(width, height, repr_constructor);
     }
@@ -158,28 +163,28 @@ public class GameIniter : MonoBehaviour
 {
     // Start is called before the first frame update
     public float refreshRate;
-    private float timeToUpdate = 0;
-    public GameObject cell_repr_template;
-    private GOLRunner simulator;
     public int howManyPreinit = 100;
+
+    private float timeToUpdate = 0;
+    private GOLRunner simulator;
 
     void Start()
     {
         int width = 160;
         int height = 100;
-        int counter = this.howManyPreinit;
-        this.cell_repr_template = Resources.Load("Prefabs/cell") as GameObject;
+        int counter = howManyPreinit;
 
+        var cell_repr_template = (GameObject)Resources.Load("Prefabs/cell");
         this.simulator = new GOLRunner(
-            width, height,
+            width: width,
+            height: height,
             repr_constructor: (Cell cell) =>
             {
-                GameObject cell_repr = Instantiate(
+                return Instantiate(
                     cell_repr_template,
                     position: new Vector3(cell.x, cell.y, 0),
                     rotation: Quaternion.identity
                 );
-                return cell_repr;
             }
         );
 
