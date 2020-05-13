@@ -4,65 +4,88 @@ using UnityEngine;
 using Binders;
 
 
-namespace Binders {
+namespace Binders
+{
     public delegate T ReprConstructor<T>(Cell cell);
 }
 
 
+public enum CellState
+{
+    Alive, Dead
+}
+
 public struct Cell
 {
     // currently alive
-    public bool isAlive;
+    public CellState current_state;
     // place to store decision on whether the cell will be alive tomorrow
-    public bool willBeAlive;
+    public CellState next_state;
     // position x
     public int x;
     // position y
     public int y;
-    public GameObject repr;
 
-    public Cell(int x, int y, bool isAlive = true)
+    public Cell(int x, int y, CellState current_state = CellState.Alive)
     {
         this.x = x;
         this.y = y;
-        this.isAlive = isAlive;
-        this.willBeAlive = isAlive;
-        this.repr = null;
+        this.current_state = current_state;
+        this.next_state = current_state;
     }
 }
 
-
-public class World
+public class World<ReprType>
 {
     public readonly int width;
     public readonly int height;
-    public Cell[][] cells;
 
-    public World(int width, int height, ReprConstructor<GameObject> repr_constructor)
+    private struct CompoundCells<R>
+    {
+        public Cell[][] cells;
+        public R[][] reprs;
+    }
+    private CompoundCells<ReprType> cells;
+
+    public World(int width, int height, ReprConstructor<ReprType> rconstructor)
     {
         this.width = width;
         this.height = height;
-        this.cells = new Cell[height][];
+        this.cells = new CompoundCells<ReprType>();
+
         for (int y_pos = 0; y_pos < height; y_pos++)
         {
-            Cell[] cells_line = new Cell[width];
+            var cells_line = new Cell[width];
+            var reprs_line = new ReprType[width];
             for (int x_pos = 0; x_pos < width; x_pos++)
             {
-                Cell cell = new Cell(x: x_pos, y: y_pos, isAlive: false);
-                cell.repr = repr_constructor(cell);
+                var cell = new Cell(x: x_pos, y: y_pos, current_state: CellState.Dead);
+                var cell_repr = rconstructor(cell);
                 cells_line[x_pos] = cell;
+                reprs_line[x_pos] = cell_repr;
             }
-            this.cells[y_pos] = cells_line;
+            this.cells.cells[y_pos] = cells_line;
+            this.cells.reprs[y_pos] = reprs_line;
         }
+    }
+
+    public ref readonly Cell[][] get_simulation_cells()
+    {
+        return ref this.cells.cells;
+    }
+
+    public void set_cell_state(int x, int y, CellState state)
+    {
+        return;
     }
 }
 
-class GOLRunner
+class GOLRunner<CellReprType>
 {
-    public World world;
-    public GOLRunner(int width, int height, ReprConstructor<GameObject> repr_constructor)
+    public World<CellReprType> world;
+    public GOLRunner(int width, int height, ReprConstructor<CellReprType> rconstructor)
     {
-        this.world = new World(width, height, repr_constructor);
+        this.world = new World<CellReprType>(width, height, rconstructor);
     }
 
     public int count_alive_around(int y, int x)
@@ -72,39 +95,39 @@ class GOLRunner
         // handy aliases
         int width = world.width;
         int height = world.height;
-        ref Cell[][] cells = ref world.cells;
-        ref Cell current_cell = ref world.cells[y][x];
+        ref readonly Cell[][] cells = ref world.get_simulation_cells();
+        ref Cell current_cell = ref cells[y][x];
 
         // Checking 8 corner tiles around with respect to the tor topology
-        if (cells[(y + 1) % height][x].isAlive)
+        if (cells[(y + 1) % height][x].current_state == CellState.Alive)
         {
             alives++;
         }
-        if (cells[(y - 1 + height) % height][x].isAlive)
+        if (cells[(y - 1 + height) % height][x].current_state == CellState.Alive)
         {
             alives++;
         }
-        if (cells[y][(x + 1) % width].isAlive)
+        if (cells[y][(x + 1) % width].current_state == CellState.Alive)
         {
             alives++;
         }
-        if (cells[y][(x - 1 + width) % width].isAlive)
+        if (cells[y][(x - 1 + width) % width].current_state == CellState.Alive)
         {
             alives++;
         }
-        if (cells[(y - 1 + height) % height][(x - 1 + width) % width].isAlive)
+        if (cells[(y - 1 + height) % height][(x - 1 + width) % width].current_state == CellState.Alive)
         {
             alives++;
         }
-        if (cells[(y + 1) % height][(x + 1) % width].isAlive)
+        if (cells[(y + 1) % height][(x + 1) % width].current_state == CellState.Alive)
         {
             alives++;
         }
-        if (cells[(y - 1 + height) % height][(x + 1) % width].isAlive)
+        if (cells[(y - 1 + height) % height][(x + 1) % width].current_state == CellState.Alive)
         {
             alives++;
         }
-        if (cells[(y + 1) % height][(x - 1 + width) % width].isAlive)
+        if (cells[(y + 1) % height][(x - 1 + width) % width].current_state == CellState.Alive)
         {
             alives++;
         }
@@ -113,27 +136,28 @@ class GOLRunner
 
     private void prepare()
     {
+        ref readonly Cell[][] cells = ref world.get_simulation_cells();
         for (int lineno = 0; lineno < world.height; lineno++)
         {
             for (int colno = 0; colno < world.width; colno++)
             {
                 int alives = count_alive_around(lineno, colno);
-                ref Cell current_cell = ref world.cells[lineno][colno];
+                ref Cell current_cell = ref cells[lineno][colno];
 
-                if (!current_cell.isAlive & alives == 3)
+                if (!(current_cell.current_state == CellState.Alive) & alives == 3)
                 {
                     // Breeding case
-                    current_cell.willBeAlive = true;
+                    current_cell.next_state = CellState.Alive;
                 }
                 else if (alives < 2 | alives > 3)
                 {
                     // {Over,under}population case
-                    current_cell.willBeAlive = false;
+                    current_cell.next_state = CellState.Dead;
                 }
                 else
                 {
                     // Default case
-                    current_cell.willBeAlive = current_cell.isAlive;
+                    current_cell.next_state = current_cell.current_state;
                 }
             }
         }
@@ -141,12 +165,13 @@ class GOLRunner
 
     private void commit()
     {
+        ref readonly Cell[][] cells = ref world.get_simulation_cells();
         for (int lineno = 0; lineno < this.world.height; lineno++)
         {
             for (int colno = 0; colno < this.world.width; colno++)
             {
-                ref var current_cell = ref this.world.cells[lineno][colno];
-                current_cell.isAlive = current_cell.willBeAlive;
+                ref var current_cell = ref cells[lineno][colno];
+                current_cell.current_state = current_cell.next_state;
             }
         }
     }
@@ -166,7 +191,7 @@ public class GameIniter : MonoBehaviour
     public int howManyPreinit = 100;
 
     private float timeToUpdate = 0;
-    private GOLRunner simulator;
+    private GOLRunner<GameObject> simulator;
 
     void Start()
     {
@@ -175,17 +200,14 @@ public class GameIniter : MonoBehaviour
         int counter = howManyPreinit;
 
         var cell_repr_template = (GameObject)Resources.Load("Prefabs/cell");
-        this.simulator = new GOLRunner(
+        this.simulator = new GOLRunner<GameObject>(
             width: width,
             height: height,
-            repr_constructor: (Cell cell) =>
-            {
-                return Instantiate(
-                    cell_repr_template,
-                    position: new Vector3(cell.x, cell.y, 0),
-                    rotation: Quaternion.identity
-                );
-            }
+            rconstructor: (Cell cell) => Instantiate(
+                cell_repr_template,
+                position: new Vector3(cell.x, cell.y, 0),
+                rotation: Quaternion.identity
+            )
         );
 
         while (counter > 0)
