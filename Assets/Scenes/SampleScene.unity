@@ -165,8 +165,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc11285b941cc71499bf5f9f4cf27ebe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  refreshRate: 40
-  cell: {fileID: 0}
+  refreshRate: 80
+  cell_repr_template: {fileID: 0}
   howManyPreinit: 1000
 --- !u!1 &519420028
 GameObject:
@@ -306,8 +306,8 @@ SpriteRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
+  m_SortingLayerID: 1180751901
+  m_SortingLayer: 1
   m_SortingOrder: 0
   m_Sprite: {fileID: 21300000, guid: 59c4b34c49ae84722be8e63b55a2d2ef, type: 3}
   m_Color: {r: 0.6509434, g: 0.6509434, b: 0.6509434, a: 1}
