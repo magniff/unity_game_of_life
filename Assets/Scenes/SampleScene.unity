@@ -264,7 +264,7 @@ GameObject:
   - component: {fileID: 1286083582}
   - component: {fileID: 1286083581}
   m_Layer: 0
-  m_Name: cell_alive
+  m_Name: RestartButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
