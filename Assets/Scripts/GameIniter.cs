@@ -13,12 +13,15 @@ public struct Cell
     public int x;
     // position y
     public int y;
+    public GameObject repr;
+
     public Cell(int x, int y, bool isAlive = true)
     {
         this.x = x;
         this.y = y;
         this.isAlive = isAlive;
         this.willBeAlive = isAlive;
+        this.repr = null;
     }
 }
 
@@ -28,8 +31,9 @@ public struct World
     public readonly int width;
     public readonly int height;
     public Cell[][] cells;
+    public delegate GameObject ReprConstructor(Cell cell);
 
-    public World(int width, int height)
+    public World(int width, int height, ReprConstructor repr_constructor)
     {
         this.width = width;
         this.height = height;
@@ -39,7 +43,9 @@ public struct World
             Cell[] cells_line = new Cell[width];
             for (int x_pos = 0; x_pos < width; x_pos++)
             {
-                cells_line[x_pos] = new Cell(x: x_pos, y: y_pos, isAlive: false);
+                Cell cell = new Cell(x: x_pos, y: y_pos, isAlive: false);
+                cell.repr = repr_constructor(cell);
+                cells_line[x_pos] = cell;
             }
             this.cells[y_pos] = cells_line;
         }
@@ -49,9 +55,9 @@ public struct World
 class GOLRunner
 {
     public World world;
-    public GOLRunner(int width, int height)
+    public GOLRunner(int width, int height, World.ReprConstructor repr_constructor)
     {
-        this.world = new World(width, height);
+        this.world = new World(width, height, repr_constructor);
     }
 
     public int count_alive_around(int y, int x)
@@ -153,19 +159,29 @@ public class GameIniter : MonoBehaviour
     // Start is called before the first frame update
     public float refreshRate;
     private float timeToUpdate = 0;
-    public GameObject cell;
+    public GameObject cell_repr_template;
     private GOLRunner simulator;
     public int howManyPreinit = 100;
-    private List<GameObject> liveCells;
 
     void Start()
     {
         int width = 160;
         int height = 100;
         int counter = this.howManyPreinit;
-        this.simulator = new GOLRunner(width, height);
-        this.cell = Resources.Load("Prefabs/cell") as GameObject;
-        this.liveCells = new List<GameObject>();
+        this.cell_repr_template = Resources.Load("Prefabs/cell") as GameObject;
+
+        this.simulator = new GOLRunner(
+            width, height,
+            repr_constructor: (Cell cell) =>
+            {
+                GameObject cell_repr = Instantiate(
+                    cell_repr_template,
+                    position: new Vector3(cell.x, cell.y, 0),
+                    rotation: Quaternion.identity
+                );
+                return cell_repr;
+            }
+        );
 
         while (counter > 0)
         {
@@ -182,25 +198,20 @@ public class GameIniter : MonoBehaviour
         float current_time = Time.time;
         if (Time.time >= this.timeToUpdate)
         {
-            this.timeToUpdate = current_time + 1f/this.refreshRate;
-            foreach (GameObject cell in this.liveCells)
-            {
-                Destroy(cell);
-            }
+            this.timeToUpdate = current_time + 1f / this.refreshRate;
             simulator.simulation_step();
             for (int pos_y = 0; pos_y < simulator.world.height; pos_y++)
             {
                 for (int pos_x = 0; pos_x < simulator.world.width; pos_x++)
                 {
                     Cell this_cell = simulator.world.cells[pos_y][pos_x];
-                    if (this_cell.isAlive)
+                    if (!this_cell.isAlive)
                     {
-                        this.liveCells.Add(
-                            Instantiate(
-                            this.cell,
-                            position: new Vector3(this_cell.x, this_cell.y, 0),
-                            rotation: Quaternion.identity
-                        ));
+                        this_cell.repr.GetComponent<SpriteRenderer>().enabled = false;
+                    }
+                    else
+                    {
+                        this_cell.repr.GetComponent<SpriteRenderer>().enabled = true;
                     }
                 }
             }
