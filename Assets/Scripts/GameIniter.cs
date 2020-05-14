@@ -202,17 +202,20 @@ class GOLRunner<CellReprType>
 public class GameIniter : MonoBehaviour
 {
     // Start is called before the first frame update
+    public Camera mainCamera;
     public float refreshRate;
-    public int howManyPreinit = 100;
+    public int preinitCount;
 
     private float timeToUpdate = 0;
     private GOLRunner<GameObject> simulator;
 
     void Start()
     {
-        int width = 160;
-        int height = 100;
-        int counter = howManyPreinit;
+        int counter = this.preinitCount;
+
+        int height = Mathf.CeilToInt(mainCamera.orthographicSize * 2);
+        int width = height * mainCamera.pixelWidth / mainCamera.pixelHeight;
+        mainCamera.transform.position = new Vector3((int)width / 2, (int)height / 2, -10);
 
         GameObject cell_repr_template = (GameObject)Resources.Load("Prefabs/cell");
         this.simulator = new GOLRunner<GameObject>(

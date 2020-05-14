@@ -165,8 +165,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc11285b941cc71499bf5f9f4cf27ebe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  refreshRate: 35
-  howManyPreinit: 3000
+  mainCamera: {fileID: 519420031}
+  refreshRate: 40
+  preinitCount: 2500
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
