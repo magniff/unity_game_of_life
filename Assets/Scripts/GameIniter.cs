@@ -35,28 +35,31 @@ public struct Cell
     }
 }
 
-public class World<ReprType>
+public class World
 {
     public readonly int width;
     public readonly int height;
 
-    private struct CompoundCells<R>
+    private struct CompoundCells
     {
         public Cell[][] cells;
-        public R[][] reprs;
+        public GameObject[][] reprs;
     }
-    private CompoundCells<ReprType> cells;
+    private CompoundCells cells;
 
-    public World(int width, int height, ReprConstructor<ReprType> rconstructor)
+    public World(int width, int height, ReprConstructor<GameObject> rconstructor)
     {
         this.width = width;
         this.height = height;
-        this.cells = new CompoundCells<ReprType>();
+        this.cells = new CompoundCells();
+
+        this.cells.cells = new Cell[height][];
+        this.cells.reprs = new GameObject[height][];
 
         for (int y_pos = 0; y_pos < height; y_pos++)
         {
             var cells_line = new Cell[width];
-            var reprs_line = new ReprType[width];
+            var reprs_line = new GameObject[width];
             for (int x_pos = 0; x_pos < width; x_pos++)
             {
                 var cell = new Cell(x: x_pos, y: y_pos, current_state: CellState.Dead);
@@ -69,23 +72,36 @@ public class World<ReprType>
         }
     }
 
-    public ref readonly Cell[][] get_simulation_cells()
+    public ref Cell[][] get_simulation_cells()
     {
         return ref this.cells.cells;
     }
 
     public void set_cell_state(int x, int y, CellState state)
     {
-        return;
+        this.cells.cells[y][x].current_state = state;
+        if (state == CellState.Alive)
+        {
+            this.cells.reprs[y][x].GetComponent<SpriteRenderer>().enabled = true;
+        }
+        else
+        {
+            this.cells.reprs[y][x].GetComponent<SpriteRenderer>().enabled = false;
+        }
+    }
+
+    public void commit_cell_state(int x, int y)
+    {
+        set_cell_state(x, y, this.cells.cells[y][x].next_state);
     }
 }
 
 class GOLRunner<CellReprType>
 {
-    public World<CellReprType> world;
-    public GOLRunner(int width, int height, ReprConstructor<CellReprType> rconstructor)
+    public World world;
+    public GOLRunner(int width, int height, ReprConstructor<GameObject> rconstructor)
     {
-        this.world = new World<CellReprType>(width, height, rconstructor);
+        world = new World(width, height, rconstructor);
     }
 
     public int count_alive_around(int y, int x)
@@ -170,8 +186,7 @@ class GOLRunner<CellReprType>
         {
             for (int colno = 0; colno < this.world.width; colno++)
             {
-                ref var current_cell = ref cells[lineno][colno];
-                current_cell.current_state = current_cell.next_state;
+                world.commit_cell_state(x: colno, y: lineno);
             }
         }
     }
@@ -199,7 +214,7 @@ public class GameIniter : MonoBehaviour
         int height = 100;
         int counter = howManyPreinit;
 
-        var cell_repr_template = (GameObject)Resources.Load("Prefabs/cell");
+        GameObject cell_repr_template = (GameObject)Resources.Load("Prefabs/cell");
         this.simulator = new GOLRunner<GameObject>(
             width: width,
             height: height,
@@ -214,28 +229,19 @@ public class GameIniter : MonoBehaviour
         {
             int x = Random.Range(0, width);
             int y = Random.Range(0, height);
-            simulator.world.cells[y][x].isAlive = true;
+            simulator.world.set_cell_state(x, y, CellState.Alive);
             counter--;
         }
     }
 
     // Update is called once per frame
-    void Update()
+    void FixedUpdate()
     {
         float current_time = Time.time;
         if (Time.time >= this.timeToUpdate)
         {
             timeToUpdate = current_time + 1f / refreshRate;
             simulator.simulation_step();
-            for (int pos_y = 0; pos_y < simulator.world.height; pos_y++)
-            {
-                for (int pos_x = 0; pos_x < simulator.world.width; pos_x++)
-                {
-                    var this_cell = simulator.world.cells[pos_y][pos_x];
-                    var renderer = this_cell.repr.GetComponent<SpriteRenderer>();
-                    renderer.enabled = this_cell.isAlive;
-                }
-            }
         };
     }
 }
