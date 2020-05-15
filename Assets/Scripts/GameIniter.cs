@@ -1,12 +1,10 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using Binders;
 
 
 namespace Binders
 {
-    public delegate T ReprConstructor<T>(Cell cell);
+    public delegate R ReprConstructor<R>(Cell cell) where R : ICellRepresentation;
 }
 
 
@@ -14,6 +12,13 @@ public enum CellState
 {
     Alive, Dead
 }
+
+
+public interface ICellRepresentation
+{
+    CellState current_state { get; set; }
+}
+
 
 public struct Cell
 {
@@ -35,31 +40,31 @@ public struct Cell
     }
 }
 
-public class World
+public class World<R> where R : ICellRepresentation
 {
     public readonly int width;
     public readonly int height;
 
-    private struct CompoundCells
+    private struct CompoundCells<R>
     {
         public Cell[][] cells;
-        public GameObject[][] reprs;
+        public R[][] reprs;
     }
-    private CompoundCells cells;
+    private CompoundCells<R> cells;
 
-    public World(int width, int height, ReprConstructor<GameObject> rconstructor)
+    public World(int width, int height, ReprConstructor<R> rconstructor)
     {
         this.width = width;
         this.height = height;
-        this.cells = new CompoundCells();
+        this.cells = new CompoundCells<R>();
 
         this.cells.cells = new Cell[height][];
-        this.cells.reprs = new GameObject[height][];
+        this.cells.reprs = new R[height][];
 
         for (int y_pos = 0; y_pos < height; y_pos++)
         {
             var cells_line = new Cell[width];
-            var reprs_line = new GameObject[width];
+            var reprs_line = new R[width];
             for (int x_pos = 0; x_pos < width; x_pos++)
             {
                 var cell = new Cell(x: x_pos, y: y_pos, current_state: CellState.Dead);
@@ -80,28 +85,21 @@ public class World
     public void set_cell_state(int x, int y, CellState state)
     {
         this.cells.cells[y][x].current_state = state;
-        if (state == CellState.Alive)
-        {
-            this.cells.reprs[y][x].GetComponent<SpriteRenderer>().enabled = true;
-        }
-        else
-        {
-            this.cells.reprs[y][x].GetComponent<SpriteRenderer>().enabled = false;
-        }
+        this.cells.reprs[y][x].current_state = state;
     }
 
     public void commit_cell_state(int x, int y)
     {
-        set_cell_state(x, y, this.cells.cells[y][x].next_state);
+        this.set_cell_state(x, y, this.cells.cells[y][x].next_state);
     }
 }
 
-class GOLRunner<CellReprType>
+class GOLRunner<R> where R : ICellRepresentation
 {
-    public World world;
-    public GOLRunner(int width, int height, ReprConstructor<GameObject> rconstructor)
+    public World<R> world;
+    public GOLRunner(int width, int height, ReprConstructor<R> rconstructor)
     {
-        world = new World(width, height, rconstructor);
+        world = new World<R>(width, height, rconstructor);
     }
 
     public int count_alive_around(int y, int x)
@@ -199,6 +197,52 @@ class GOLRunner<CellReprType>
 }
 
 
+public class CellRepresentation : ICellRepresentation
+{
+    private GameObject _unity_object;
+    private GameObject _unity_object_template;
+    private Cell _cell_object;
+    public CellState current_state
+    {
+        get
+        {
+            return this._cell_object.current_state;
+        }
+        set
+        {
+            if (value == CellState.Alive)
+            {
+                if (this._unity_object == null)
+                {
+                    this._unity_object = Object.Instantiate(
+                        this._unity_object_template,
+                        new Vector3(this._cell_object.x, this._cell_object.y, 0),
+                        rotation: Quaternion.identity
+                    );
+                }
+                else
+                {
+                    this._unity_object.GetComponent<SpriteRenderer>().enabled = true;
+                }
+            }
+            else
+            {
+                if (this._unity_object != null)
+                {
+                    this._unity_object.GetComponent<SpriteRenderer>().enabled = false;
+                }
+            }
+        }
+    }
+    public CellRepresentation(Cell cell_object, GameObject template)
+    {
+        this._unity_object = null;
+        this._unity_object_template = template;
+        this._cell_object = cell_object;
+    }
+}
+
+
 public class GameIniter : MonoBehaviour
 {
     // Start is called before the first frame update
@@ -207,7 +251,7 @@ public class GameIniter : MonoBehaviour
     public int preinitCount;
 
     private float timeToUpdate = 0;
-    private GOLRunner<GameObject> simulator;
+    private GOLRunner<CellRepresentation> simulator;
 
     void Start()
     {
@@ -218,14 +262,11 @@ public class GameIniter : MonoBehaviour
         mainCamera.transform.position = new Vector3((int)width / 2, (int)height / 2, -10);
 
         GameObject cell_repr_template = (GameObject)Resources.Load("Prefabs/cell");
-        this.simulator = new GOLRunner<GameObject>(
+
+        simulator = new GOLRunner<CellRepresentation>(
             width: width,
             height: height,
-            rconstructor: (Cell cell) => Instantiate(
-                cell_repr_template,
-                position: new Vector3(cell.x, cell.y, 0),
-                rotation: Quaternion.identity
-            )
+            rconstructor: (Cell cell) => (new CellRepresentation(cell, cell_repr_template))
         );
 
         while (counter > 0)
@@ -238,7 +279,7 @@ public class GameIniter : MonoBehaviour
     }
 
     // Update is called once per frame
-    void FixedUpdate()
+    void Update()
     {
         float current_time = Time.time;
         if (Time.time >= this.timeToUpdate)
