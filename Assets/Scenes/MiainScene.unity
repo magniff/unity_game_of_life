@@ -167,8 +167,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mainCamera: {fileID: 519420031}
-  refreshRate: 30
-  preinitCount: 2500
+  refreshRate: 40
+  preinitCount: 2000
 --- !u!1 &303861467
 GameObject:
   m_ObjectHideFlags: 0

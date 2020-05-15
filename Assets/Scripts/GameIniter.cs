@@ -10,7 +10,7 @@ namespace Binders
 
 public enum CellState
 {
-    Alive, Dead
+    Dead = 0, Alive
 }
 
 
@@ -197,7 +197,8 @@ class GOLRunner<R> where R : ICellRepresentation
 }
 
 
-public class CellRepresentation : ICellRepresentation
+// Cell representation with a lazy GameObject allocator
+public struct CellRepresentation : ICellRepresentation
 {
     private GameObject _unity_object;
     private GameObject _unity_object_template;
@@ -215,8 +216,8 @@ public class CellRepresentation : ICellRepresentation
                 if (this._unity_object == null)
                 {
                     this._unity_object = Object.Instantiate(
-                        this._unity_object_template,
-                        new Vector3(this._cell_object.x, this._cell_object.y, 0),
+                        original: this._unity_object_template,
+                        position: new Vector3(this._cell_object.x, this._cell_object.y, 0),
                         rotation: Quaternion.identity
                     );
                 }
@@ -249,6 +250,7 @@ public class GameIniter : MonoBehaviour
     public Camera mainCamera;
     public float refreshRate;
     public int preinitCount;
+    public GameObject cell_repr_template;
 
     private float timeToUpdate = 0;
     private GOLRunner<CellRepresentation> simulator;
@@ -261,12 +263,10 @@ public class GameIniter : MonoBehaviour
         int width = height * mainCamera.pixelWidth / mainCamera.pixelHeight;
         mainCamera.transform.position = new Vector3((int)width / 2, (int)height / 2, -10);
 
-        GameObject cell_repr_template = (GameObject)Resources.Load("Prefabs/cell");
-
         simulator = new GOLRunner<CellRepresentation>(
             width: width,
             height: height,
-            rconstructor: (Cell cell) => (new CellRepresentation(cell, cell_repr_template))
+            rconstructor: (Cell cell) => new CellRepresentation(cell, this.cell_repr_template)
         );
 
         while (counter > 0)
