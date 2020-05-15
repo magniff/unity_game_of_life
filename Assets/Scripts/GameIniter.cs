@@ -250,6 +250,7 @@ public class GameIniter : MonoBehaviour
     public Camera mainCamera;
     public float refreshRate;
     public int preinitCount;
+    // Set me in inspector
     public GameObject cell_repr_template;
 
     private float timeToUpdate = 0;
@@ -257,8 +258,6 @@ public class GameIniter : MonoBehaviour
 
     void Start()
     {
-        int counter = this.preinitCount;
-
         int height = Mathf.CeilToInt(mainCamera.orthographicSize * 2);
         int width = height * mainCamera.pixelWidth / mainCamera.pixelHeight;
         mainCamera.transform.position = new Vector3((int)width / 2, (int)height / 2, -10);
@@ -269,6 +268,7 @@ public class GameIniter : MonoBehaviour
             rconstructor: (Cell cell) => new CellRepresentation(cell, this.cell_repr_template)
         );
 
+        int counter = this.preinitCount;
         while (counter > 0)
         {
             int x = Random.Range(0, width);
@@ -278,7 +278,6 @@ public class GameIniter : MonoBehaviour
         }
     }
 
-    // Update is called once per frame
     void Update()
     {
         float current_time = Time.time;
