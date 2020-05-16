@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class DragAndZoom : MonoBehaviour
+public class TouchZoom : MonoBehaviour
 {
     public float zoomMax = 200;
     public float zoomMin = 30;
+    public float zoomSensitivity = 0.02f;
     Vector3 touchStart;
 
     // Update is called once per frame
@@ -21,24 +22,14 @@ public class DragAndZoom : MonoBehaviour
             var prevMagnitude = (touch0PrevPosition - touch1PrevPosition).magnitude;
             var currentMagnitude = (touch0.position - touch1.position).magnitude;
 
-            zoom((currentMagnitude - prevMagnitude) * 0.03f);
-        }
-        else
-        {
-            if (Input.GetMouseButtonDown(0))
-            {
-                this.touchStart = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            }
-            if (Input.GetMouseButton(0))
-            {
-                Vector3 direction = this.touchStart - Camera.main.ScreenToWorldPoint(Input.mousePosition);
-                Camera.main.transform.position += direction;
-            }
-        }
-
-        void zoom(float increment)
-        {
-            Camera.main.orthographicSize = Mathf.Clamp(Camera.main.orthographicSize - increment, zoomMin, zoomMax);
+            Camera.main.orthographicSize = Mathf.Clamp(
+                value: (
+                    Camera.main.orthographicSize -
+                    (currentMagnitude - prevMagnitude) * this.zoomSensitivity
+                ),
+                min: zoomMin,
+                max: zoomMax
+            );
         }
     }
 }
