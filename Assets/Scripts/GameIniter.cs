@@ -1,5 +1,7 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
 using Binders;
+
 
 
 namespace Binders
@@ -281,9 +283,10 @@ public class GameIniter : MonoBehaviour
     void Update()
     {
         float current_time = Time.time;
+        float tick_rate = GameObject.Find("TickRate").GetComponent<Slider>().value;
         if (Time.time >= this.timeToUpdate)
         {
-            timeToUpdate = current_time + 1f / refreshRate;
+            timeToUpdate = current_time + 1f / tick_rate;
             simulator.simulation_step();
         };
     }
